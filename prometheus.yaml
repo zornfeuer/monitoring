@@ -22,7 +22,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: 'zorn-vds' # TODO
+        replacement: 'zorn-vds'
 
   - job_name: 'cadvisor'
     static_configs:
@@ -36,24 +36,6 @@ scrape_configs:
       - source_labels: [container_label_com_docker_compose_service]
         regex: 'prometheus|grafana|loki|promtail|cadvisor|node-exporter|process-exporter'
         action: drop
-
-  # ── BLACKBOX-EXPORTER (ОПЦИОНАЛЬНО): ПРОВЕРКА ДОСТУПНОСТИ ──
-  # Раскомментировать после развёртывания blackbox-exporter
-  # - job_name: 'blackbox'
-  #   metrics_path: /probe
-  #   params:
-  #     module: [http_2xx]  # Использует модуль из конфига blackbox-exporter
-  #   static_configs:
-  #     - targets:
-  #         - https://api.telegram.org  # проверка связи с Телеграмом
-  #         - http://localhost:8080      # проверка sing-box API (если есть)
-  #   relabel_configs:
-  #     - source_labels: [__address__]
-  #       target_label: __param_target
-  #     - source_labels: [__param_target]
-  #       target_label: instance
-  #     - target_label: __address__
-  #       replacement: blackbox-exporter:9115  # адрес самого экспортера
 
 rule_files:
   - 'rules/recording/*.yml'
