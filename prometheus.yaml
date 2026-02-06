@@ -22,7 +22,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: 'vargasov-arch' # TODO
+        replacement: 'zorn-vds' # TODO
 
   - job_name: 'cadvisor'
     static_configs:
