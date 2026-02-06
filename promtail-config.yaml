@@ -1,0 +1,71 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /run/promtail/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    batchwait: 1s
+    batchsize: 102400  # 100 КБ
+    timeout: 10s
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+scrape_configs:
+  - job_name: containers
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: containers
+          __path__: /var/lib/docker/containers/*/*-json.log
+
+    relabel_configs:
+      - source_labels:
+          - __path__
+        regex: /var/lib/docker/containers/([a-f0-9]{64})/.*-json\.log
+        target_label: container_id
+        replacement: $1
+
+      - source_labels: [__path__]
+        regex: /var/lib/docker/containers/([a-f0-9]{64})/.*-json\.log
+        target_label: __tmp_container_id
+        replacement: $1
+
+      - source_labels: [__tmp_container_id]
+        target_label: container_name
+        replacement: /var/lib/docker/containers/$1/config.v2.json
+
+      - source_labels: [container_name]
+        regex: '.*"Name":"/(.+)".*'
+        target_label: container_name
+        replacement: $1
+
+      - source_labels: [container_name]
+        regex: 'prometheus|grafana|loki|promtail|cadvisor|node-exporter|process-exporter'
+        action: drop
+
+      - target_label: host
+        replacement: vps-main
+
+    pipeline_stages:
+      - docker: {}
+
+      - regex:
+          expression: 'level=(?P<level>[a-zA-Z]+)'
+          source: log
+      - regex:
+          expression: '"level":"(?P<level>[^"]+)"'
+          source: log
+      - regex:
+          expression: '(?i)(ERROR|WARN|WARNING|INFO|DEBUG)'
+          source: log
+          target_label: level
+
+target_config:
+  sync_period: 10s

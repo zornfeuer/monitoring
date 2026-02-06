@@ -1,0 +1,60 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  scrape_timeout: 10s
+
+  external_labels:
+    environment: 'prod'
+    location: 'vps-01'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: /metrics
+    scheme: http
+
+  - job_name: node
+    static_configs:
+      - targets: ['node-exporter:9100']
+    metrics_path: /metrics
+    scheme: http
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'vargasov-arch' # TODO
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metrics_path: /metrics
+    scheme: http
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'container_(cpu|memory|network|fs)_.*|machine_cpu_cores|machine_memory_bytes'
+        action: keep
+      - source_labels: [container_label_com_docker_compose_service]
+        regex: 'prometheus|grafana|loki|promtail|cadvisor|node-exporter|process-exporter'
+        action: drop
+
+  # ── BLACKBOX-EXPORTER (ОПЦИОНАЛЬНО): ПРОВЕРКА ДОСТУПНОСТИ ──
+  # Раскомментировать после развёртывания blackbox-exporter
+  # - job_name: 'blackbox'
+  #   metrics_path: /probe
+  #   params:
+  #     module: [http_2xx]  # Использует модуль из конфига blackbox-exporter
+  #   static_configs:
+  #     - targets:
+  #         - https://api.telegram.org  # проверка связи с Телеграмом
+  #         - http://localhost:8080      # проверка sing-box API (если есть)
+  #   relabel_configs:
+  #     - source_labels: [__address__]
+  #       target_label: __param_target
+  #     - source_labels: [__param_target]
+  #       target_label: instance
+  #     - target_label: __address__
+  #       replacement: blackbox-exporter:9115  # адрес самого экспортера
+
+rule_files:
+  - 'rules/recording/*.yml'
+  - 'rules/alerting/*.yml'
