@@ -33,6 +33,12 @@ scrape_configs:
         regex: 'prometheus|grafana|loki|promtail|cadvisor|node-exporter|process-exporter'
         action: drop
 
+  - job_name: loki
+    static_configs:
+      - targets: ['loki:3100']
+    metrics_path: /metrics
+    scheme: http
+
 rule_files:
   - 'rules/recording/*.yml'
   - 'rules/alerting/*.yml'
